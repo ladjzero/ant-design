@@ -420,6 +420,69 @@ describe('Upload', () => {
     });
   });
 
+  // https://github.com/ant-design/ant-design/issues/18902
+  it('should not abort uploading until return value of onRemove is resolved as true', done => {
+    let wrapper;
+
+    const props = {
+      onRemove: () =>
+        new Promise(
+          resolve =>
+            setTimeout(() => {
+              wrapper.update();
+              expect(props.fileList).toHaveLength(1);
+              expect(props.fileList[0].status).toBe('uploading');
+              resolve(true);
+            }),
+          100,
+        ),
+      fileList: [
+        {
+          uid: '-1',
+          name: 'foo.png',
+          status: 'uploading',
+          url: 'http://www.baidu.com/xxx.png',
+        },
+      ],
+      onChange: () => {
+        expect(props.fileList).toHaveLength(1);
+        expect(props.fileList[0].status).toBe('removed');
+        done();
+      },
+    };
+
+    wrapper = mount(<Upload {...props} />);
+
+    wrapper.find('div.ant-upload-list-item i.anticon-delete').simulate('click');
+  });
+
+  it('should not stop download when return use onDownload', done => {
+    const mockRemove = jest.fn(() => false);
+    const props = {
+      onRemove: mockRemove,
+      fileList: [
+        {
+          uid: '-1',
+          name: 'foo.png',
+          status: 'done',
+          url: 'http://www.baidu.com/xxx.png',
+        },
+      ],
+    };
+
+    const wrapper = mount(<Upload {...props} onDownload={() => {}} />);
+
+    wrapper.find('div.ant-upload-list-item i.anticon-download').simulate('click');
+
+    setImmediate(() => {
+      wrapper.update();
+
+      expect(props.fileList).toHaveLength(1);
+      expect(props.fileList[0].status).toBe('done');
+      done();
+    });
+  });
+
   // https://github.com/ant-design/ant-design/issues/14439
   it('should allow call abort function through upload instance', () => {
     const wrapper = mount(

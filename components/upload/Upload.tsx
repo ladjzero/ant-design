@@ -161,34 +161,31 @@ class Upload extends React.Component<UploadProps, UploadState> {
     });
   };
 
-  handleRemove(file: UploadFile) {
+  handleRemove = (file: UploadFile) => {
     const { onRemove } = this.props;
-    const { status } = file;
-
-    file.status = 'removed'; // eslint-disable-line
+    const { fileList } = this.state;
 
     Promise.resolve(typeof onRemove === 'function' ? onRemove(file) : onRemove).then(ret => {
       // Prevent removing file
       if (ret === false) {
-        file.status = status;
         return;
       }
 
-      const removedFileList = removeFileItem(file, this.state.fileList);
+      const removedFileList = removeFileItem(file, fileList);
+
       if (removedFileList) {
+        file.status = 'removed'; // eslint-disable-line
+
+        if (this.upload) {
+          this.upload.abort(file);
+        }
+
         this.onChange({
           file,
           fileList: removedFileList,
         });
       }
     });
-  }
-
-  handleManualRemove = (file: UploadFile) => {
-    if (this.upload) {
-      this.upload.abort(file);
-    }
-    this.handleRemove(file);
   };
 
   onChange = (info: UploadChangeParam) => {
@@ -246,7 +243,7 @@ class Upload extends React.Component<UploadProps, UploadState> {
         items={this.state.fileList}
         previewFile={previewFile}
         onPreview={onPreview}
-        onRemove={this.handleManualRemove}
+        onRemove={this.handleRemove}
         showRemoveIcon={!disabled && showRemoveIcon}
         showPreviewIcon={showPreviewIcon}
         locale={{ ...locale, ...this.props.locale }}
